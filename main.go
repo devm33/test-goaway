@@ -28,7 +28,7 @@ func main() {
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(target)
-	
+
 	// Customize the director to preserve the original request
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
@@ -46,8 +46,14 @@ func main() {
 			// Send GOAWAY frame for HTTP/2 connections
 			if r.ProtoMajor == 2 {
 				log.Printf("Sending GOAWAY for /chat/completions request")
-				// For HTTP/2, panic with ErrAbortHandler causes the server
-				// to close the stream abnormally, similar to GOAWAY behavior
+				// Send an initial response header before GOAWAY
+				w.Header().Set("Content-Type", "text/event-stream")
+				w.WriteHeader(http.StatusOK)
+				if flusher, ok := w.(http.Flusher); ok {
+					flusher.Flush()
+				}
+				// Close the stream after 100ms to send GOAWAY
+				time.Sleep(100 * time.Millisecond)
 				panic(http.ErrAbortHandler)
 			}
 			// For HTTP/1.1, just close the connection
@@ -87,7 +93,7 @@ func main() {
 	log.Printf("Starting server on https://localhost:8443")
 	log.Printf("Proxying to %s", targetURL)
 	log.Printf("GOAWAY will be sent for /chat/completions requests")
-	
+
 	if err := server.ListenAndServeTLS("", ""); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
