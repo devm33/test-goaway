@@ -44,32 +44,8 @@ func main() {
 			// Send GOAWAY frame for HTTP/2 connections
 			if r.ProtoMajor == 2 {
 				log.Printf("Sending GOAWAY for /chat/completions request")
-				// Flush to send the response
-				if flusher, ok := w.(http.Flusher); ok {
-					flusher.Flush()
-				}
-				// Get the underlying HTTP/2 connection and send GOAWAY
-				if pusher, ok := w.(http.Pusher); ok {
-					// This is an HTTP/2 connection
-					// We need to access the underlying http2 framer
-					// Unfortunately, there's no direct way to send GOAWAY through the standard library
-					// We'll use the HTTP/2 server's CloseNotify and panic to trigger GOAWAY
-					_ = pusher // avoid unused variable
-				}
-				
-				// The most reliable way to send GOAWAY is to use http2.Server directly
-				// and close the connection, which will automatically send GOAWAY
-				// We'll hijack the connection if possible
-				if hijacker, ok := w.(http.Hijacker); ok {
-					conn, _, err := hijacker.Hijack()
-					if err == nil {
-						conn.Close() // This will trigger GOAWAY in HTTP/2
-						return
-					}
-				}
-				
-				// Fallback: Return an error that will close the connection
-				// This will cause the HTTP/2 server to send GOAWAY
+				// For HTTP/2, panic with ErrAbortHandler causes the server
+				// to close the stream abnormally, similar to GOAWAY behavior
 				panic(http.ErrAbortHandler)
 			}
 			// For HTTP/1.1, just close the connection
