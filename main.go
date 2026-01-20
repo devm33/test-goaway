@@ -40,6 +40,8 @@ func main() {
 	// Create the main handler
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check if this is a /chat/completions request
+		// This matches /chat/completions and any path ending with /chat/completions
+		// (e.g., /v1/chat/completions, /api/chat/completions)
 		if strings.HasSuffix(r.URL.Path, "/chat/completions") {
 			// Send GOAWAY frame for HTTP/2 connections
 			if r.ProtoMajor == 2 {
